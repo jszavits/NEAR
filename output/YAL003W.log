@@ -1,0 +1,53 @@
+INFO: Program started.
+INFO: Reading A-site_YAL003W.dat.
+INFO: Number of codons = 207
+INFO: Number of codons with zero reads = 13
+INFO: Getting elongation-to-initation rates from the mean-field solution.
+INFO: Computing local densities using MC simulation with the mean-field rates.
+INFO: Sum of squares (mean-field rates) =  9.775882007050488E-003
+WARNING: Power series method gives error larger than PSMTOL at codon =       7
+WARNING: Power series method gives error larger than PSMTOL at codon =      10
+WARNING: Power series method gives error larger than PSMTOL at codon =      12
+WARNING: Power series method gives error larger than PSMTOL at codon =      13
+WARNING: Power series method gives error larger than PSMTOL at codon =      14
+WARNING: Power series method gives error larger than PSMTOL at codon =      17
+WARNING: Power series method gives error larger than PSMTOL at codon =      18
+WARNING: Power series method gives error larger than PSMTOL at codon =      20
+WARNING: Power series method gives error larger than PSMTOL at codon =      21
+WARNING: Power series method gives error larger than PSMTOL at codon =      22
+WARNING: Power series method gives error larger than PSMTOL at codon =      23
+WARNING: Power series method gives error larger than PSMTOL at codon =      25
+WARNING: Power series method gives error larger than PSMTOL at codon =      26
+WARNING: Power series method gives error larger than PSMTOL at codon =      27
+WARNING: Power series method gives error larger than PSMTOL at codon =      28
+WARNING: Power series method gives error larger than PSMTOL at codon =      30
+WARNING: Power series method gives error larger than PSMTOL at codon =      31
+WARNING: Power series method gives error larger than PSMTOL at codon =      33
+WARNING: Power series method gives error larger than PSMTOL at codon =      95
+WARNING: Power series method gives error larger than PSMTOL at codon =      96
+WARNING: Power series method gives error larger than PSMTOL at codon =      97
+WARNING: Power series method gives error larger than PSMTOL at codon =      98
+WARNING: Power series method gives error larger than PSMTOL at codon =      99
+WARNING: Power series method gives error larger than PSMTOL at codon =     100
+WARNING: Power series method gives error larger than PSMTOL at codon =     101
+WARNING: Power series method gives error larger than PSMTOL at codon =     102
+WARNING: Power series method gives error larger than PSMTOL at codon =     103
+WARNING: Power series method gives error larger than PSMTOL at codon =     104
+WARNING: Power series method gives error larger than PSMTOL at codon =     105
+WARNING: Power series method gives error larger than PSMTOL at codon =     106
+WARNING: Power series method gives error larger than PSMTOL at codon =     107
+WARNING: Power series method gives error larger than PSMTOL at codon =     109
+WARNING: Power series method gives error larger than PSMTOL at codon =     112
+WARNING: Power series method gives error larger than PSMTOL at codon =     113
+WARNING: Power series method gives error larger than PSMTOL at codon =     115
+WARNING: Power series method gives error larger than PSMTOL at codon =     116
+WARNING: Power series method gives error larger than PSMTOL at codon =     138
+INFO: Power series method may not be realiable.
+INFO: Number of codons for nonlinear optimisation =     103
+INFO: Started derivative-free nonlinear least-squares optimization (BOBYQA algoritm).
+INFO: Number of iterations =    2578
+INFO: NLopt successful with IRES value =    3
+INFO: NLopt stopped because the optimisation step changed the function value by less than FTOL.
+INFO: Computing local densities using MC simulation with the optimised rates.
+INFO: Sum of squares (optimised rates)  3.147595884484431E-003
+INFO: Program finished successfully in   293.757 seconds.
