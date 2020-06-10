@@ -45,7 +45,7 @@ The file *genelist.dat* contains names of genes to optimise. The format of the f
 
 where \<*genename*\> is a name for the gene (maximum 10 characters) and \<*average ribosome density*\> is equal to the number of ribosomes per transcript length, where the transcript length is equal to the number of codons including STOP but exclusing START.
 
-### ribo-seq directory
+### *ribo-seq* directory
 
 *ribo-seq* directory should contain files with A-site footprint reads. Each file should be named *A-site_\<genename\>.dat*, where \<*genename*\> should be matched to the \<*genename*\> in the file *genelist.dat*. The format of the file *A-site_\<genename\>.dat* is:
 
