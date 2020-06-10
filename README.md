@@ -80,7 +80,7 @@ The main results are `omega`, `rhomc` and `current`. Other results are for the q
 
 ## References
 
-\[1\] MacDonald CT, Gibbs JH, Pipkin AC. Kinetics of biopolymerization on nucleic acid templates. [Biopolymers. 1968 Jan;6(1):1–25.](https://doi.org/10.1002/bip.1968.360060102)
-\[2\] Szavits-Nossan J, Ciandrini L. Inferring efficiency of translation initiation and elongation from ribosome profiling. [bioRxiv](https://doi.org/10.1101/719302)
+1. MacDonald CT, Gibbs JH, Pipkin AC. Kinetics of biopolymerization on nucleic acid templates. [Biopolymers. 1968 Jan;6(1):1–25.](https://doi.org/10.1002/bip.1968.360060102)
+2. Szavits-Nossan J, Ciandrini L. Inferring efficiency of translation initiation and elongation from ribosome profiling. [bioRxiv](https://doi.org/10.1101/719302)
 
 
