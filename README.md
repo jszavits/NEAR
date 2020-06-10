@@ -7,7 +7,7 @@ Non-Equilibrium Analysis of Ribo-seq (NEAR) is a program that infers codon-depen
 
 ## Installation
 
-The program is written in Fortran. Before compiling the program, [NLopt library](https://nlopt.readthedocs.io/en/latest/) must be installed. NLopt library is available for Unix-like systems and Windows. After installing NLopt, the program can be compiled using `gfortran`. On a Linux system, go to the directory `source` and set the path to the NLopt library:
+The program is written in Fortran. Before compiling the program, [NLopt library](https://nlopt.readthedocs.io/en/latest/) must be installed. NLopt library is available for Unix-like systems and Windows. After installing NLopt, the program can be compiled using `gfortran`. On a Linux system, go to the directory *source* and set the path to the NLopt library:
 
 > export LD_LIBRARY_PATH=\<*absolute path to NLopt*\>/lib64
   
