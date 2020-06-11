@@ -43,7 +43,7 @@ The file *genelist.dat* contains names of genes to optimise. The format of the f
 > \<*genename*\> \<*average ribosome density*\>  
 > ...    
 
-where \<*genename*\> is a name for the gene (maximum 10 characters) and \<*average ribosome density*\> is equal to the number of ribosomes per transcript length, where the transcript length is equal to the number of codons including STOP but exclusing START.
+where \<*genename*\> is a name for the gene (maximum 10 characters) and \<*average ribosome density*\> is equal to the number of ribosomes per transcript length, where the transcript length is equal to the number of codons including STOP but excluding START.
 
 ### *ribo-seq* directory
 
