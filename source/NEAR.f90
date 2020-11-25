@@ -843,7 +843,7 @@ subroutine mc(L,ll,omega,tau,iter,t,rho,current)
   real(kind=8),intent(in) :: omega(2:L)
   integer(kind=4),intent(inout) :: tau(2:L)
   integer(kind=8),intent(in) :: iter
-  real(kind=8),intent(out) :: t
+  real(kind=8),intent(inout) :: t
   real(kind=8),intent(out) :: rho(2:L),current(1:L)
 
   ! local variables
