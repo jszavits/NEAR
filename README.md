@@ -57,7 +57,7 @@ where \<*genename*\> is a name for the gene (maximum 10 characters) and \<*avera
 
 All output data are written in the directory *output*. For each gene in the *genelist.dat* file, two output files are generated. One file are the results of the optimisation procedure, called \<*genename\>-results.dat*. The other file is a log file, where details of the optimisation procedure are stored, for example if the optimisation was successful. Results are stored in the following format:
 
-> \<*codon*\> \<*included*\> \<*rhoexp*\> \<*rhomc0*\> \<*rhomc*\> \<*rhopsm*\> \<*current0*\> \<*current*\> \<*f1*\> \<*f2*\> \<*f3*\> 
+> \<*codon*\> \<*included*\> \<*rhoexp*\> \<*rhomc0*\> \<*rhomc*\> \<*rhopsm*\> \<*omega0*\> \<*omega*\> \<*current0*\> \<*current*\> \<*f1*\> \<*f2*\> \<*f3*\> 
 
 where
 
