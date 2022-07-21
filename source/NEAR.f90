@@ -369,6 +369,7 @@ program dTASEP
 
           deallocate(x)
           deallocate(lb,ub)
+	  deallocate(positions)
 
           if (ires.lt.0) then  ! optimisation unsuccessful
             ! write to log file
@@ -452,7 +453,6 @@ program dTASEP
             enddo
             close(55)
             deallocate(rhomc,current)
-            deallocate(positions)
           endif
           call nlo_destroy(opt)
         else
