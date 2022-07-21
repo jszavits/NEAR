@@ -27,12 +27,12 @@ After compiling, move the executable file NEAR to the main directory.
 
 The main parameters of the program are stored in the file *NEAR.dat*. The parameters are:
 
-- `l`: ribosome footprint lenght (*default* = 10)
-- `mftol`: tolerance for the relative error between experimental density and theoretical density predicted by the mean-field approximation (*default* = 0.05)
-- `psmtol`: tolerance for the relative error between theoretical density predicted by the mean-field approximation and by the power-series method (*default* = 0.1)
+- `l`: ribosome footprint lenght in codons (*default* = 10)
+- `mftol`: tolerance for the relative error between the experimental density and theoretical density predicted by the mean-field approximation (*default* = 0.05)
+- `psmtol`: tolerance for the relative error between the theoretical density predicted by the mean-field approximation and by the power-series method (*default* = 0.1)
 - `ftol`: stop iterating when the relative change in the objective function is at most ftol (*default* = 1.0d-8)
 - `maxtime`: maximum time in seconds for optimisation of one gene (*default* = 3600)
-- `iter`: number of iterations for Gillespie algorithm (*default* = 10000)
+- `iter`: number of iterations for the Gillespie algorithm (*default* = 10000)
 - `inputfile`: file with a list of genes to optimise (*default* = genelist.dat)
 
 ### genelist.dat
@@ -43,7 +43,7 @@ The file *genelist.dat* contains names of genes to optimise. The format of the f
 > \<*genename*\> \<*average ribosome density*\>  
 > ...    
 
-where \<*genename*\> is a name for the gene (maximum 10 characters) and \<*average ribosome density*\> is equal to the number of ribosomes per transcript length, where the transcript length is equal to the number of codons including STOP but excluding START.
+where \<*genename*\> is a name for the gene (maximum 10 characters) and \<*average ribosome density*\> is equal to the number of ribosomes per transcript length, where the transcript length is equal to the number of codons including STOP but excluding START. Note that by definition, \<*average ribosome density*\> must be smaller or equal to 1/l, where l is the ribosome footprint length in codons. An input density that is larger than 1/l will cause the program to stop.
 
 ### *ribo-seq* directory
 
