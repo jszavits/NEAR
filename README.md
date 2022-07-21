@@ -1,9 +1,13 @@
 # NEAR
-Non-Equilibrium Analysis of Ribosome profiling data
+**N**on-**E**quilibrium **A**nalysis of **R**ibosome profiling data
 
 ## Description
 
-Non-Equilibrium Analysis of Ribo-seq (NEAR) is a program that infers codon-dependent elongation rates relative to the initiation rate from A-site density measured by ribosome profiling. The program uses nonlinear optimisation to match the experimental ribosome density to the theoretical density predicted by a mathematical model for ribosome dynamics called the totally asymmetric simple exclusion process (TASEP) \[1\]. The progam is described in detail in \[2\].
+Non-Equilibrium Analysis of Ribo-seq (NEAR) is a program that infers codon-dependent elongation rates relative to the initiation rate from A-site density measured by ribosome profiling. The program uses nonlinear optimisation to match the experimental ribosome density to the theoretical density predicted by a mathematical model for ribosome dynamics called the totally asymmetric simple exclusion process (TASEP) \[1\]. The progam is described in detail in \[2\]. 
+
+## Limitation
+
+An important limitation of the program is that the input data, namely the A-site densities, must be properly normalised. Let RFP$_i$ denotes the number of ribosome footprints for a given mRNA species at codon $i$. Let $\rho_i$ denotes the ribosomal density at codon $i$, i.e. the probability that the ribosome's A-site is positioned at codon $i$. Then RFP$_i$/RFP$_{av}$ is equal to $\rho_i/\sum_i \rho$, where RFP$_{av}$ is the average number of reads for that mRNA species, RFP=$\sum_i$ RFP$_i$/(L-1) and $\rho$ is the ribosome density, i.e. the number of ribosomes on the mRNA divided by the number of codons L-1, $\rho=\sum_i \rho_i/(L-1)$. Here we normalise by L-1 instead of L because the start codon is included in the initiation mechanism in the model. Note that for this program to be useful, one must know the ribosome density $\rho$, which is not normally known in ribosome profiling experiments. It can be obtained, for example, by polysome profiling experiments, or it can be estimated using ribosome proofiling and RNA-seq.
 
 ## Installation
 
