@@ -118,329 +118,351 @@ program dTASEP
       ! read file with reads      
       open(33,file='ribo-seq/A-site_'//genename(1:filenamelen2)//'.dat',&
         & status='OLD',iostat=err33)
-      k=0
-      eof2=.FALSE.
-      do while (eof2.EQV..FALSE.)
-        read(33,*,iostat=stat33) codoni,readsi
-        if (stat33.EQ.0) then		
-          k=k+1
-        else
-      	  eof2=.TRUE.
-        endif
-      enddo
-      close(33)
-
-      ! number of codons
-      L=k+1
-
-      ! array to store absolute ribosome density
-      allocate(rhoexp(2:L))
-
-      ! read file with reads again
-      allocate(codon(2:L),reads(2:L))
-      open(33,file='ribo-seq/A-site_'//genename(1:filenamelen2)//'.dat',&
-		& status='OLD',iostat=err33)
-      j=0
-      avreads=0.0d0
-      do i=2,L
-        read(33,*) codon(i),reads(i)
-        ! normalization 
-        if (reads(i).gt.0) then
-          rhoexp(i)=dble(reads(i))*density
-          avreads=avreads+dble(reads(i))
-        else
-          j=j+1
-          rhoexp(i)=density
-          avreads=avreads+1.0d0
-        endif
-      enddo
-      avreads=avreads/dble(L-1)
-      rhoexp=rhoexp/avreads
-      close(33)
-
-      ! check if all local densities are <1
-      under1=.true.
-      i=2
-      do while ((under1.eqv..true.).and.(i.LE.L))
-        if (rhoexp(i).gt.1.0d0) then
-          under1=.false.
-        endif
-        i=i+1
-      enddo
-
-      ! proceed if all local densities are <1
-      if (under1.eqv..true.) then
-        
-        ! write to log file
-        open(44,file='output/'//genename(1:filenamelen2)//'-NEAR.log',&
-          & status='OLD',position='APPEND',iostat=err44)
-        write(str,'(I4)') L
-        write(44,'(A)') 'INFO: Number of codons including START = ' // trim(adjustl(str))
-        write(str,'(I4)') j
-        write(44,'(A)') 'INFO: Number of codons with zero reads = ' // trim(adjustl(str))
-        write(44,'(A)') 'INFO: Getting elongation-to-initation rates from the mean-field solution.' 
-
-        ! initial estimate of the rates from the mean-field solution
-        allocate(omega0(2:L),omega(2:L))
-        h1=1.0d0-sum(rhoexp(2:ll+1))
-        do i=2,L-ll
-          hi=rhoexp(i)*(1.0d0-sum(rhoexp(i+1:i+ll)))/(1.0d0-sum(rhoexp(i+1:i+ll))+rhoexp(i+ll))
-          omega0(i)=h1/hi
-          if (omega0(i).lt.0.0d0) then
-            write(44,'(A60,I7)') 'WARNING: Negative MF elongation rate encountered at codon = ',i
-            omega0(i)=1.0d0/rhoexp(i)
-          endif
-        enddo
-        do i=L-ll+1,L
-          hi=rhoexp(i)
-          omega0(i)=h1/hi
-          if (omega0(i).lt.0.0d0) then
-            write(44,'(A60,I7)') 'WARNING: Negative MF elongation rate encountered at codon = ',i
-            omega0(i)=1.0d0/rhoexp(i)
-          endif
-        enddo
-        close(44)
-
-        ! write to log file
-        open(44,file='output/'//genename(1:filenamelen2)//'-NEAR.log',&
-          & status='OLD',position='APPEND',iostat=err44)
-        write(44,'(A)') 'INFO: Computing local densities using MC simulation &
-		  & with the mean-field rates.'
-        close(44)
-
-        ! run Monte Carlo simulation with MF rates (to reach the steady state)
-        allocate(tau(2:L))
-        allocate(rhomc0(2:L),current0(1:L))
-        ttime=0.0d0
-        time=0.0d0
-        tau=0
-        rhomc0=0.0d0
-        current0=0.0d0
-        found=.FALSE.
-        do while (found.EQV..FALSE.)
-          tden1=sum(rhomc0)/dble(L-1)
-          call mc(L,ll,omega0,tau,100_8,time,rhomc0,current0)
-          ttime=ttime+time
-          tden2=sum(rhomc0)/dble(L-1)
-          if (tden2.gt.epsilon(1.0d0)) then
-            rel=abs(tden2-tden1)/tden2
-            if (rel.lt.1.d-3) then
-              found=.TRUE.
-            endif
-          endif
-        enddo
-
-        ! run Monte Carlo simulation with MF rates (in the steady state)
-		! and compute density profile
-        time=0.0d0
-        rhomc0=0.0d0
-        current0=0.0d0
-        call mc(L,ll,omega0,tau,iter,time,rhomc0,current0)
-
-        ! compute the initial value of the objective function
-        val0=0.0d0
-        do i=2,L
-          val0=val0+(rhomc0(i)-rhoexp(i))*(rhomc0(i)-rhoexp(i))
-        enddo
-
-        ! write to log file
-        open(44,file='output/'//genename(1:filenamelen2)//'-NEAR.log',&
-          & status='OLD',position='APPEND',iostat=err44)
-        write(44,'(A42,ES23.15E3)') 'INFO: Sum of squares (mean-field rates) = ',val0
-        close(44)
-
-        ! find codons for which the relative error between rhomc0 and rhoexp is < mftol
-        allocate(mfok(2:L))
-        mfok=0
-        do i=2,L
-          fracerr=abs(rhoexp(i)-rhomc0(i))/rhoexp(i) 
-          if (fracerr.lt.mftol) then
-            mfok(i)=1  ! mf is a good approximation
-          endif
-        enddo
-
-        ! auxillary arrays for the power series method
-        allocate(f22(2:L-ll,2+ll:L),f21(2:L))
-        allocate(f33a(2+ll:L-ll,2*ll+2:L),f33b(2+ll:L-ll,2*ll+2:L),f33L(2:L-2*ll,2+ll:L-ll))
-        allocate(f32(2:L-ll,2+ll:L),f31(2:L))
-        allocate(f1(2:L),f2(2:L),f3(2:L))
-        
-        ! find codons for which the relative error between rhopsm and rhomc0 is < psmtol
-        allocate(rhopsm(2:L))
-        call psm3(L,ll,omega0,rhopsm)
-        allocate(psmok(2:L))
-        do i=2,L
-          fracerr=abs(rhomc0(i)-rhopsm(i))/rhomc0(i) 
-          if (fracerr.lt.psmtol) then
-            psmok(i)=1  ! power series method is a good approximation
-          endif 
-        enddo
-
-        ! write to log file
-        open(44,file='output/'//genename(1:filenamelen2)//'-NEAR.log',&
-          & status='OLD',position='APPEND',iostat=err44)
- 
-        allocate(included(2:L))
-        j=0
+		
+	  if (err33.eq.0) then
         k=0
-        do i=2,L
-          if (mfok(i).eq.1) then
-            included(i)=0
+        eof2=.FALSE.
+        do while (eof2.EQV..FALSE.)
+          read(33,*,iostat=stat33) codoni,readsi
+          if (stat33.EQ.0) then		
+            k=k+1
           else
-            ! count codons with with mfok=0
-            j=j+1
-            if (psmok(i).eq.1) then
-              included(i)=1  
-            else
-              included(i)=-1
-              k=k+1
-              write(44,'(A71,I7)') 'WARNING: Power series method gives error larger than &
-			    & PSMTOL at codon = ',i
-            endif
+      	    eof2=.TRUE.
           endif
         enddo
-        if (k.gt.0) then
-          write(44,'(A47,I7)') 'INFO: Power series method may not be realiable.'
-        endif
-        close(44)
+        close(33)
 
-        ! number of equations for local optimisation
-        Nequations=j
+        ! number of codons
+        L=k+1
 
-        ! mfok and psmok are not needed anymore
-        deallocate(mfok)
-        deallocate(psmok)
+        ! array to store absolute ribosome density
+        allocate(rhoexp(2:L))
 
-        ! nonlinear optimisation
-        if (Nequations.gt.0) then
+        ! read file with reads again
+        allocate(codon(2:L),reads(2:L))
+        open(33,file='ribo-seq/A-site_'//genename(1:filenamelen2)//'.dat',&
+		  & status='OLD',iostat=err33)
+        j=0
+        avreads=0.0d0
+        do i=2,L
+          read(33,*) codon(i),reads(i)
+          ! normalization 
+          if (reads(i).gt.0) then
+            rhoexp(i)=dble(reads(i))*density
+            avreads=avreads+dble(reads(i))
+          else
+            j=j+1
+            rhoexp(i)=density
+            avreads=avreads+1.0d0
+          endif
+        enddo
+        avreads=avreads/dble(L-1)
+        rhoexp=rhoexp/avreads
+        close(33)
 
-          ! select codons for nonlinear optimisation
-          allocate(positions(1:Nequations))
-          j=0
-          do i=2,L
-            if ((included(i).eq.1).or.(included(i).eq.-1)) then
-              j=j+1
-              positions(j)=i
+        ! check if all local densities are <1
+        under1=.true.
+        i=2
+        do while ((under1.eqv..true.).and.(i.LE.L))
+          if (rhoexp(i).gt.1.0d0) then
+            under1=.false.
+          endif
+          i=i+1
+        enddo
+
+        ! proceed if all local densities are <1
+        if (under1.eqv..true.) then
+        
+          ! write to log file
+          open(44,file='output/'//genename(1:filenamelen2)//'-NEAR.log',&
+            & status='OLD',position='APPEND',iostat=err44)
+          write(str,'(I4)') L
+          write(44,'(A)') 'INFO: Number of codons including START = ' // trim(adjustl(str))
+          write(str,'(I4)') j
+          write(44,'(A)') 'INFO: Number of codons with zero reads = ' // trim(adjustl(str))
+          write(44,'(A)') 'INFO: Getting elongation-to-initation rates from the mean-field solution.' 
+
+          ! initial estimate of the rates from the mean-field solution
+          allocate(omega0(2:L),omega(2:L))
+          h1=1.0d0-sum(rhoexp(2:ll+1))
+          do i=2,L-ll
+            hi=rhoexp(i)*(1.0d0-sum(rhoexp(i+1:i+ll)))/(1.0d0-sum(rhoexp(i+1:i+ll))+rhoexp(i+ll))
+            omega0(i)=h1/hi
+            if (omega0(i).lt.0.0d0) then
+              write(44,'(A60,I7)') 'WARNING: Negative MF elongation rate encountered at codon = ',i
+              omega0(i)=1.0d0/rhoexp(i)
             endif
+          enddo
+          do i=L-ll+1,L
+            hi=rhoexp(i)
+            omega0(i)=h1/hi
+            if (omega0(i).lt.0.0d0) then
+              write(44,'(A60,I7)') 'WARNING: Negative MF elongation rate encountered at codon = ',i
+              omega0(i)=1.0d0/rhoexp(i)
+            endif
+          enddo
+          close(44)
+
+          ! write to log file
+          open(44,file='output/'//genename(1:filenamelen2)//'-NEAR.log',&
+            & status='OLD',position='APPEND',iostat=err44)
+          write(44,'(A)') 'INFO: Computing local densities using MC simulation &
+		    & with the mean-field rates.'
+          close(44)
+
+          ! run Monte Carlo simulation with MF rates (to reach the steady state)
+          allocate(tau(2:L))
+          allocate(rhomc0(2:L),current0(1:L))
+          ttime=0.0d0
+          time=0.0d0
+          tau=0
+          rhomc0=0.0d0
+          current0=0.0d0
+          found=.FALSE.
+          do while (found.EQV..FALSE.)
+            tden1=sum(rhomc0)/dble(L-1)
+            call mc(L,ll,omega0,tau,100_8,time,rhomc0,current0)
+            ttime=ttime+time
+            tden2=sum(rhomc0)/dble(L-1)
+            if (tden2.gt.epsilon(1.0d0)) then
+              rel=abs(tden2-tden1)/tden2
+              if (rel.lt.1.d-3) then
+                found=.TRUE.
+              endif
+            endif
+          enddo
+
+          ! run Monte Carlo simulation with MF rates (in the steady state)
+		  ! and compute density profile
+          time=0.0d0
+          rhomc0=0.0d0
+          current0=0.0d0
+          call mc(L,ll,omega0,tau,iter,time,rhomc0,current0)
+
+          ! compute the initial value of the objective function
+          val0=0.0d0
+          do i=2,L
+            val0=val0+(rhomc0(i)-rhoexp(i))*(rhomc0(i)-rhoexp(i))
           enddo
 
           ! write to log file
           open(44,file='output/'//genename(1:filenamelen2)//'-NEAR.log',&
             & status='OLD',position='APPEND',iostat=err44)
-          write(44,'(A52,I7)') 'INFO: Number of codons for nonlinear optimisation = ', Nequations
-          write(44,'(A)') 'INFO: Started derivative-free nonlinear least-squares &
-			& optimization (BOBYQA algoritm).'
+          write(44,'(A42,ES23.15E3)') 'INFO: Sum of squares (mean-field rates) = ',val0
           close(44)
 
-          allocate(x(1:Nequations))	      
-
-          ! select algorithm
-          opt=0
-          call nlo_create(opt,NLOPT_LN_BOBYQA,Nequations)
-
-          ! box constraints
-          allocate(lb(1:Nequations),ub(1:Nequations))
-          lb=1.d-3
-          ub=1.d6
-          call nlo_set_lower_bounds(ires,opt,lb)
-          call nlo_set_upper_bounds(ires,opt,ub)
-
-          ! initial rates
-          omega=omega0
-          do j=1,Nequations
-            i=positions(j)
-            if (omega(i).LE.ub(j)) then
-              x(j)=omega(i)
-            else
-              x(j)=ub(j)-epsilon(1.0d0)
+          ! find codons for which the relative error between rhomc0 and rhoexp is < mftol
+          allocate(mfok(2:L))
+          mfok=0
+          do i=2,L
+            fracerr=abs(rhoexp(i)-rhomc0(i))/rhoexp(i) 
+            if (fracerr.lt.mftol) then
+              mfok(i)=1  ! mf is a good approximation
             endif
           enddo
 
-          ! objective function
-          call nlo_set_min_objective(ires,opt,fnc3,0)
+          ! auxillary arrays for the power series method
+          allocate(f22(2:L-ll,2+ll:L),f21(2:L))
+          allocate(f33a(2+ll:L-ll,2*ll+2:L),f33b(2+ll:L-ll,2*ll+2:L),f33L(2:L-2*ll,2+ll:L-ll))
+          allocate(f32(2:L-ll,2+ll:L),f31(2:L))
+          allocate(f1(2:L),f2(2:L),f3(2:L))
+        
+          ! find codons for which the relative error between rhopsm and rhomc0 is < psmtol
+          allocate(rhopsm(2:L))
+          call psm3(L,ll,omega0,rhopsm)
+          allocate(psmok(2:L))
+          do i=2,L
+            fracerr=abs(rhomc0(i)-rhopsm(i))/rhomc0(i) 
+            if (fracerr.lt.psmtol) then
+              psmok(i)=1  ! power series method is a good approximation
+            endif 
+          enddo
 
-          ! stopping criteria
-          call nlo_set_ftol_rel(ires,opt,ftol)
-          call nlo_set_maxtime(ires,opt,maxtime)
-
-          ! optimisation step
-          Niter=0
-          call nlo_optimize(ires,opt,x,minf)
-
-          deallocate(x)
-          deallocate(lb,ub)
-	  deallocate(positions)
-
-          if (ires.lt.0) then  ! optimisation unsuccessful
-            ! write to log file
-            open(44,file='output/'//genename(1:filenamelen2)//'-NEAR.log',&
-              & status='OLD',position='APPEND',iostat=err44)
-            write(44,'(A29,I7)') 'INFO: Number of iterations = ', Niter
-            write(44,'(A37,I4)') 'INFO: NLopt FAILED with IRES value = ',ires
-			if (ires.eq.-1) then
-			  write(44,'(A49)') 'INFO: NLopt stopped because of a generic failure.'
-			elseif (ires.eq.-2) then
-			  write(44,'(A49)') 'INFO: NLopt stopped because of invalid arguments.'
-			elseif (ires.eq.-3) then
-			  write(44,'(A30)') 'INFO: NLopt ran out of memory.'
-			else
-			  write(44,'(A69)') 'INFO: NLopt stopped because rounding errors limited &
-			    & further progress.' 
-			endif
-            close(44)
-
-          else  ! optimisation successful
-            ! write to log file
-            open(44,file='output/'//genename(1:filenamelen2)//'-NEAR.log',&
-              & status='OLD',position='APPEND',iostat=err44)
-            write(44,'(A29,I7)') 'INFO: Number of iterations = ', Niter
-            write(44,'(A45,I4)') 'INFO: NLopt was SUCCESSFUL with IRES value = ',ires
-            if (ires.eq.3) then
-              write(44,'(A50)') 'INFO: NLopt finished because FTOL_REL was reached.'
+          ! write to log file
+          open(44,file='output/'//genename(1:filenamelen2)//'-NEAR.log',&
+            & status='OLD',position='APPEND',iostat=err44)
+ 
+          allocate(included(2:L))
+          j=0
+          k=0
+          do i=2,L
+            if (mfok(i).eq.1) then
+              included(i)=0
+            else
+              ! count codons with with mfok=0
+              j=j+1
+              if (psmok(i).eq.1) then
+                included(i)=1  
+              else
+                included(i)=-1
+                k=k+1
+                write(44,'(A71,I7)') 'WARNING: Power series method gives error larger than &
+			      & PSMTOL at codon = ',i
+              endif
             endif
-            if (ires.eq.6) then
-              write(44,'(A49)') 'INFO: NLopt finished because MAXTIME was reached.'
-            endif
-            write(44,'(A)') 'INFO: Computing local densities using MC simulation with the optimised rates.'
-            close(44)
+          enddo
+          if (k.gt.0) then
+            write(44,'(A47,I7)') 'INFO: Power series method may not be realiable.'
+          endif
+          close(44)
 
-            ! run Monte Carlo simulation with MF rates (to reach the steady state)
-            allocate(rhomc(2:L),current(1:L))
-            ttime=0.0d0
-            time=0.0d0
-            tau=0
-            rhomc=0.0d0
-            current=0.0d0
-            found=.FALSE.
-            do while (found.EQV..FALSE.)
-              tden1=sum(rhomc)/dble(L-1)
-              call mc(L,ll,omega,tau,100_8,time,rhomc,current)
-              ttime=ttime+time
-              tden2=sum(rhomc)/dble(L-1)
-              if (tden2.gt.epsilon(1.0d0)) then
-        	rel=abs(tden2-tden1)/tden2
-        	if (rel.lt.1.d-3) then
-        	  found=.TRUE.
-        	endif
+          ! number of equations for local optimisation
+          Nequations=j
+
+          ! mfok and psmok are not needed anymore
+          deallocate(mfok)
+          deallocate(psmok)
+
+          ! nonlinear optimisation
+          if (Nequations.gt.0) then
+
+            ! select codons for nonlinear optimisation
+            allocate(positions(1:Nequations))
+            j=0
+            do i=2,L
+              if ((included(i).eq.1).or.(included(i).eq.-1)) then
+                j=j+1
+                positions(j)=i
               endif
             enddo
 
-            ! run Monte Carlo simulation with MF rates (in the steady state) and compute density profile
-            time=0.0d0
-            rhomc=0.0d0
-            current=0.0d0
-            call mc(L,ll,omega,tau,iter,time,rhomc,current)
+            ! write to log file
+            open(44,file='output/'//genename(1:filenamelen2)//'-NEAR.log',&
+              & status='OLD',position='APPEND',iostat=err44)
+            write(44,'(A52,I7)') 'INFO: Number of codons for nonlinear optimisation = ', Nequations
+            write(44,'(A)') 'INFO: Started derivative-free nonlinear least-squares &
+			  & optimization (BOBYQA algoritm).'
+            close(44)
 
-            ! compute optimised value of the objective function
-            val=0.0d0
-            do i=2,L
-              val=val+(rhomc(i)-rhoexp(i))*(rhomc(i)-rhoexp(i))
+            allocate(x(1:Nequations))	      
+
+            ! select algorithm
+            opt=0
+            call nlo_create(opt,NLOPT_LN_BOBYQA,Nequations)
+
+            ! box constraints
+            allocate(lb(1:Nequations),ub(1:Nequations))
+            lb=1.d-3
+            ub=1.d6
+            call nlo_set_lower_bounds(ires,opt,lb)
+            call nlo_set_upper_bounds(ires,opt,ub)
+
+            ! initial rates
+            omega=omega0
+            do j=1,Nequations
+              i=positions(j)
+              if (omega(i).LE.ub(j)) then
+                x(j)=omega(i)
+              else
+                x(j)=ub(j)-epsilon(1.0d0)
+              endif
             enddo
+
+            ! objective function
+            call nlo_set_min_objective(ires,opt,fnc3,0)
+
+            ! stopping criteria
+            call nlo_set_ftol_rel(ires,opt,ftol)
+            call nlo_set_maxtime(ires,opt,maxtime)
+
+            ! optimisation step
+            Niter=0
+            call nlo_optimize(ires,opt,x,minf)
+
+            deallocate(x)
+            deallocate(lb,ub)
+	        deallocate(positions)
+
+            if (ires.lt.0) then  ! optimisation unsuccessful
+              ! write to log file
+              open(44,file='output/'//genename(1:filenamelen2)//'-NEAR.log',&
+                & status='OLD',position='APPEND',iostat=err44)
+              write(44,'(A29,I7)') 'INFO: Number of iterations = ', Niter
+              write(44,'(A37,I4)') 'INFO: NLopt FAILED with IRES value = ',ires
+			  if (ires.eq.-1) then
+			    write(44,'(A49)') 'INFO: NLopt stopped because of a generic failure.'
+			  elseif (ires.eq.-2) then
+			    write(44,'(A49)') 'INFO: NLopt stopped because of invalid arguments.'
+			  elseif (ires.eq.-3) then
+			    write(44,'(A30)') 'INFO: NLopt ran out of memory.'
+			  else
+			    write(44,'(A69)') 'INFO: NLopt stopped because rounding errors limited &
+			      & further progress.' 
+			  endif
+              close(44)
+
+            else  ! optimisation successful
+              ! write to log file
+              open(44,file='output/'//genename(1:filenamelen2)//'-NEAR.log',&
+                & status='OLD',position='APPEND',iostat=err44)
+              write(44,'(A29,I7)') 'INFO: Number of iterations = ', Niter
+              write(44,'(A45,I4)') 'INFO: NLopt was SUCCESSFUL with IRES value = ',ires
+              if (ires.eq.3) then
+                write(44,'(A50)') 'INFO: NLopt finished because FTOL_REL was reached.'
+              endif
+              if (ires.eq.6) then
+                write(44,'(A49)') 'INFO: NLopt finished because MAXTIME was reached.'
+              endif
+              write(44,'(A)') 'INFO: Computing local densities using MC simulation with the optimised rates.'
+              close(44)
+
+              ! run Monte Carlo simulation with MF rates (to reach the steady state)
+              allocate(rhomc(2:L),current(1:L))
+              ttime=0.0d0
+              time=0.0d0
+              tau=0
+              rhomc=0.0d0
+              current=0.0d0
+              found=.FALSE.
+              do while (found.EQV..FALSE.)
+                tden1=sum(rhomc)/dble(L-1)
+                call mc(L,ll,omega,tau,100_8,time,rhomc,current)
+                ttime=ttime+time
+                tden2=sum(rhomc)/dble(L-1)
+                if (tden2.gt.epsilon(1.0d0)) then
+        	      rel=abs(tden2-tden1)/tden2
+        	      if (rel.lt.1.d-3) then
+        	        found=.TRUE.
+        	      endif
+                endif
+              enddo
+
+              ! run Monte Carlo simulation with MF rates (in the steady state) and compute density profile
+              time=0.0d0
+              rhomc=0.0d0
+              current=0.0d0
+              call mc(L,ll,omega,tau,iter,time,rhomc,current)
+
+              ! compute optimised value of the objective function
+              val=0.0d0
+              do i=2,L
+                val=val+(rhomc(i)-rhoexp(i))*(rhomc(i)-rhoexp(i))
+              enddo
+
+              ! write to log file
+              open(44,file='output/'//genename(1:filenamelen2)//'-NEAR.log',&
+                & status='OLD',position='APPEND',iostat=err44)
+              write(44,'(A39,ES23.15E3)') 'INFO: Sum of squares (optimised rates) = ',val
+              close(44)
+
+              ! write output
+              open(55,file='output/'//genename(1:filenamelen2)//'-NEAR-results.dat',status='REPLACE',iostat=err55)
+              do i=2,L
+                write(55,'(A3,A1,I1,A1,ES23.15E3,A1,ES23.15E3,A1,ES23.15E3,A1,ES23.15E3,A1,ES23.15E3,A1,ES23.15E3,A1,& 
+                  & ES23.15E3,A1,ES23.15E3,A1,ES23.15E3,A1,ES23.15E3,A1,ES23.15E3)') codon(i),' ',included(i),' ',&
+                  & rhoexp(i),' ',rhomc0(i),' ',rhomc(i),' ',f1(i)+f2(i)+f3(i),' ',omega0(i),' ',omega(i),' ',&
+                  & current0(i),' ',current(i),' ',f1(i),' ',f2(i),' ',f3(i)
+              enddo
+              close(55)
+              deallocate(rhomc,current)
+            endif
+            call nlo_destroy(opt)
+          else
 
             ! write to log file
             open(44,file='output/'//genename(1:filenamelen2)//'-NEAR.log',&
               & status='OLD',position='APPEND',iostat=err44)
-            write(44,'(A39,ES23.15E3)') 'INFO: Sum of squares (optimised rates) = ',val
+            write(44,'(A)') 'INFO: Nothing to optimise. Rates are estimated from the mean-field approximation.'
             close(44)
 
             ! write output
@@ -448,61 +470,48 @@ program dTASEP
             do i=2,L
               write(55,'(A3,A1,I1,A1,ES23.15E3,A1,ES23.15E3,A1,ES23.15E3,A1,ES23.15E3,A1,ES23.15E3,A1,ES23.15E3,A1,& 
                 & ES23.15E3,A1,ES23.15E3,A1,ES23.15E3,A1,ES23.15E3,A1,ES23.15E3)') codon(i),' ',included(i),' ',&
-                & rhoexp(i),' ',rhomc0(i),' ',rhomc(i),' ',f1(i)+f2(i)+f3(i),' ',omega0(i),' ',omega(i),' ',&
-                & current0(i),' ',current(i),' ',f1(i),' ',f2(i),' ',f3(i)
+                & rhoexp(i),' ',rhomc0(i),' ',rhomc0(i),' ',f1(i)+f2(i)+f3(i),' ',omega0(i),' ',omega0(i),' ',&
+                & current0(i),' ',current0(i),' ',f1(i),' ',f2(i),' ',f3(i)
             enddo
             close(55)
-            deallocate(rhomc,current)
           endif
-          call nlo_destroy(opt)
-        else
+ 
+		  ! stop measuring time
+          call cpu_time(t2)
 
           ! write to log file
           open(44,file='output/'//genename(1:filenamelen2)//'-NEAR.log',&
             & status='OLD',position='APPEND',iostat=err44)
-          write(44,'(A)') 'INFO: Nothing to optimise. Rates are estimated from the mean-field approximation.'
+          write(44,'(A39,F9.3,A9)') 'INFO: Program finished successfully in ',t2-t1,' seconds.'
           close(44)
 
-          ! write output
-          open(55,file='output/'//genename(1:filenamelen2)//'-NEAR-results.dat',status='REPLACE',iostat=err55)
-          do i=2,L
-            write(55,'(A3,A1,I1,A1,ES23.15E3,A1,ES23.15E3,A1,ES23.15E3,A1,ES23.15E3,A1,ES23.15E3,A1,ES23.15E3,A1,& 
-              & ES23.15E3,A1,ES23.15E3,A1,ES23.15E3,A1,ES23.15E3,A1,ES23.15E3)') codon(i),' ',included(i),' ',&
-              & rhoexp(i),' ',rhomc0(i),' ',rhomc0(i),' ',f1(i)+f2(i)+f3(i),' ',omega0(i),' ',omega0(i),' ',&
-              & current0(i),' ',current0(i),' ',f1(i),' ',f2(i),' ',f3(i)
-          enddo
-          close(55)
+          deallocate(included) 
+          deallocate(tau)
+          deallocate(rhomc0,current0)
+          deallocate(omega0,omega)
+          deallocate(rhopsm)
+          deallocate(f22,f21)
+          deallocate(f33a,f33b,f33L)
+          deallocate(f32,f31)
+          deallocate(f1,f2,f3)
+        else
+
+          ! write to log file
+          open(44,file='output/'//genename(1:filenamelen2)//'-NEAR.log',&
+	        & status='OLD',position='APPEND',iostat=err44)
+	      write(44,'(A)') 'ERROR: Unable to normalise Ribo-seq. Gene skipped.'
+          close(44)
         endif
- 
-		! stop measuring time
-        call cpu_time(t2)
 
-        ! write to log file
-        open(44,file='output/'//genename(1:filenamelen2)//'-NEAR.log',&
-          & status='OLD',position='APPEND',iostat=err44)
-        write(44,'(A39,F9.3,A9)') 'INFO: Program finished successfully in ',t2-t1,' seconds.'
-        close(44)
-
-        deallocate(included) 
-        deallocate(tau)
-        deallocate(rhomc0,current0)
-        deallocate(omega0,omega)
-        deallocate(rhopsm)
-        deallocate(f22,f21)
-        deallocate(f33a,f33b,f33L)
-        deallocate(f32,f31)
-        deallocate(f1,f2,f3)
-      else
-
-        ! write to log file
-        open(44,file='output/'//genename(1:filenamelen2)//'-NEAR.log',&
-	      & status='OLD',position='APPEND',iostat=err44)
-	    write(44,'(A)') 'ERROR: Unable to normalise Ribo-seq. Gene skipped.'
-        close(44)
-      endif
-
-      deallocate(rhoexp)
-      deallocate(codon,reads) 
+        deallocate(rhoexp)
+        deallocate(codon,reads)
+	  else
+	    ! write to log file
+          open(44,file='output/'//genename(1:filenamelen2)//'-NEAR.log',&
+	        & status='OLD',position='APPEND',iostat=err44)
+	      write(44,'(A)') 'ERROR: Unable to find a file with A-site reads. Gene skipped.'
+          close(44)
+	  endif
     else
       ! end of file
       eof=.TRUE.
