@@ -28,6 +28,10 @@ Finally, compile the program named NEAR linking to the NLopt library:
 > gfortran NEAR.f90 -I\<*absolute path to nlopt*\>/include -L\<*absolute path to nlopt*\>/lib64 -lnlopt -lm -o NEAR mt19937.o
 
 After compiling, move the executable file NEAR to the main directory.
+
+### Windows
+
+Install Cygwin with Devel packages (cmake, make, gcc). Then follow the instructions from the nlopt website for Linux installation.
   
 ## Input data
 
