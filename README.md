@@ -31,7 +31,19 @@ After compiling, move the executable file NEAR to the main directory.
 
 ### Windows
 
-Install Cygwin with Devel packages (cmake, make, gcc). Then follow the instructions from the nlopt website for Linux installation.
+Install Cygwin with Devel packages (cmake, make, gcc). Then follow the instructions from the nlopt website for Linux installation of nlopt. After the installation, go to the directory *source* and set the path to the NLopt library:
+
+> export LD_LIBRARY_PATH=/usr/local/lib
+  
+Then compile the object file for the Mersenne Twister pseudorandom number generator:
+
+> gfortran -c mt19937.f90
+
+Finally, compile the program named NEAR linking to the NLopt library:
+
+> gfortran NEAR.f90 -I/usr/local/include -L/usr/local/lib -lnlopt -lm -o NEAR mt19937.o
+
+After compiling, move the executable file NEAR to the main directory
   
 ## Input data
 
